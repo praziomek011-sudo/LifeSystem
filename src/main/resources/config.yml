@@ -6,7 +6,13 @@ player-death-only: false
 # Domyślna liczba żyć przy pierwszym dołączeniu
 default-lives: 5
 
-# Czas bana w godzinach po utracie wszystkich żyć
+# Maksymalna liczba żyć jaką gracz może mieć (za zabójstwa nie przekroczy)
+max-lives: 7
+
+# Ile żyć dostaje gracz po odbanowaniu (po utracie wszystkich)
+lives-after-ban: 3
+
+# Czas bana w godzinach
 ban-duration-hours: 48
 
 # Powód bana
