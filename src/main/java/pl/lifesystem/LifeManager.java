@@ -1,10 +1,8 @@
 package pl.lifesystem;
 
-import org.bukkit.Bukkit;
 import org.bukkit.OfflinePlayer;
 import org.bukkit.configuration.file.FileConfiguration;
 import org.bukkit.configuration.file.YamlConfiguration;
-import org.bukkit.entity.Player;
 
 import java.io.File;
 import java.io.IOException;
@@ -25,44 +23,39 @@ public class LifeManager {
                 livesFile.getParentFile().mkdirs();
                 livesFile.createNewFile();
             } catch (IOException e) {
-                plugin.getLogger().severe("Nie można utworzyć pliku lives.yml!");
+                plugin.getLogger().severe("Nie można utworzyć lives.yml!");
                 e.printStackTrace();
             }
         }
-
         this.livesConfig = YamlConfiguration.loadConfiguration(livesFile);
     }
 
-    /** Pobiera liczbę żyć gracza. Jeśli nie ma danych, ustawia domyślną wartość. */
     public int getLives(OfflinePlayer player) {
-        UUID uuid = player.getUniqueId();
-        String path = "players." + uuid + ".lives";
-
+        String path = "players." + player.getUniqueId() + ".lives";
         if (!livesConfig.contains(path)) {
-            int defaultLives = plugin.getConfig().getInt("default-lives", 5);
-            livesConfig.set(path, defaultLives);
+            int def = plugin.getConfig().getInt("default-lives", 5);
+            livesConfig.set(path, def);
             saveData();
-            return defaultLives;
+            return def;
         }
-
         return livesConfig.getInt(path);
     }
 
-    /** Ustawia liczbę żyć gracza. */
     public void setLives(OfflinePlayer player, int amount) {
-        UUID uuid = player.getUniqueId();
-        String path = "players." + uuid + ".lives";
+        String path = "players." + player.getUniqueId() + ".lives";
         livesConfig.set(path, Math.max(0, amount));
         saveData();
     }
 
-    /** Dodaje życia graczowi. */
-    public void addLives(OfflinePlayer player, int amount) {
+    /** Dodaje życia, ale NIE przekracza max-lives. Zwraca ile faktycznie dodano. */
+    public int addLives(OfflinePlayer player, int amount) {
         int current = getLives(player);
-        setLives(player, current + amount);
+        int max = getMaxLives();
+        int newAmount = Math.min(current + amount, max);
+        setLives(player, newAmount);
+        return newAmount - current;
     }
 
-    /** Odejmuje życie graczowi. Zwraca nową liczbę żyć. */
     public int removeLife(OfflinePlayer player) {
         int current = getLives(player);
         int newAmount = Math.max(0, current - 1);
@@ -70,7 +63,29 @@ public class LifeManager {
         return newAmount;
     }
 
-    /** Zapisuje dane do pliku. */
+    public int getMaxLives() {
+        return plugin.getConfig().getInt("max-lives", 7);
+    }
+
+    public int getLivesAfterBan() {
+        return plugin.getConfig().getInt("lives-after-ban", 3);
+    }
+
+    /** Oznacza gracza jako "czeka na przywrócenie żyć po banie". */
+    public void markBanPending(OfflinePlayer player) {
+        livesConfig.set("players." + player.getUniqueId() + ".ban-pending", true);
+        saveData();
+    }
+
+    public boolean isBanPending(OfflinePlayer player) {
+        return livesConfig.getBoolean("players." + player.getUniqueId() + ".ban-pending", false);
+    }
+
+    public void clearBanPending(OfflinePlayer player) {
+        livesConfig.set("players." + player.getUniqueId() + ".ban-pending", null);
+        saveData();
+    }
+
     public void saveData() {
         try {
             livesConfig.save(livesFile);
@@ -78,10 +93,5 @@ public class LifeManager {
             plugin.getLogger().severe("Nie można zapisać lives.yml!");
             e.printStackTrace();
         }
-    }
-
-    /** Ładuje dane z pliku. */
-    public void reloadData() {
-        livesConfig = YamlConfiguration.loadConfiguration(livesFile);
     }
 }
