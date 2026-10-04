@@ -1,0 +1,12 @@
+name: LifeSystem
+version: 1.0.0
+main: pl.lifesystem.LifeSystem
+api-version: '1.21'
+author: DeepSeek
+description: System żyć – gracze tracą życia po śmierci, a przy 0 żyć dostają bana na 48h.
+
+commands:
+  lifesystem:
+    description: Główna komenda systemu żyć.
+    usage: /lifesystem <check|give|set|PlayerDeathOnly> ...
+    aliases: [ls, life]

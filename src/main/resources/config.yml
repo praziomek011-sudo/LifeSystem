@@ -1,0 +1,13 @@
+# Czy życie ma być tracone TYLKO gdy gracz zostanie zabity przez innego gracza?
+# true  = tylko śmierć z rąk gracza zabiera życie
+# false = każda śmierć zabiera życie
+player-death-only: false
+
+# Domyślna liczba żyć przy pierwszym dołączeniu
+default-lives: 5
+
+# Czas bana w godzinach po utracie wszystkich żyć
+ban-duration-hours: 48
+
+# Powód bana
+ban-reason: "Straciłeś wszystkie życia! Wróć za 48 godzin."
