@@ -14,7 +14,7 @@ public class NameTagManager {
         this.lifeManager = plugin.getLifeManager();
     }
 
-    /** Ustawia suffix za nickiem: ❤ za każde życie, ☠ za każde stracone. */
+    /** Ustawia suffix za nickiem: ❤ za każde życie, ☠ za każde stracone (białe). */
     public void updatePlayer(Player player) {
         if (player == null) return;
 
@@ -36,8 +36,8 @@ public class NameTagManager {
     public String buildSuffix(int lives, int max) {
         StringBuilder sb = new StringBuilder();
         for (int i = 0; i < max; i++) {
-            if (i < lives) sb.append(ChatColor.RED).append("\u2764");       // ❤
-            else sb.append(ChatColor.DARK_GRAY).append("\u2620");           // ☠
+            if (i < lives) sb.append(ChatColor.WHITE).append("\u2764");   // ❤
+            else sb.append(ChatColor.WHITE).append("\u2620");              // ☠
         }
         return sb.toString();
     }
