@@ -6,7 +6,6 @@ import org.bukkit.configuration.file.YamlConfiguration;
 
 import java.io.File;
 import java.io.IOException;
-import java.util.UUID;
 
 public class LifeManager {
 
@@ -23,7 +22,7 @@ public class LifeManager {
                 livesFile.getParentFile().mkdirs();
                 livesFile.createNewFile();
             } catch (IOException e) {
-                plugin.getLogger().severe("Nie można utworzyć lives.yml!");
+                plugin.getLogger().severe("Nie mozna utworzyc lives.yml!");
                 e.printStackTrace();
             }
         }
@@ -47,7 +46,7 @@ public class LifeManager {
         saveData();
     }
 
-    /** Dodaje życia, ale NIE przekracza max-lives. Zwraca ile faktycznie dodano. */
+    /** Dodaje życia, nie przekracza max. Zwraca ile dodano. */
     public int addLives(OfflinePlayer player, int amount) {
         int current = getLives(player);
         int max = getMaxLives();
@@ -64,14 +63,13 @@ public class LifeManager {
     }
 
     public int getMaxLives() {
-        return plugin.getConfig().getInt("max-lives", 7);
+        return plugin.getConfig().getInt("max-lives", 5);
     }
 
     public int getLivesAfterBan() {
         return plugin.getConfig().getInt("lives-after-ban", 3);
     }
 
-    /** Oznacza gracza jako "czeka na przywrócenie żyć po banie". */
     public void markBanPending(OfflinePlayer player) {
         livesConfig.set("players." + player.getUniqueId() + ".ban-pending", true);
         saveData();
@@ -90,7 +88,7 @@ public class LifeManager {
         try {
             livesConfig.save(livesFile);
         } catch (IOException e) {
-            plugin.getLogger().severe("Nie można zapisać lives.yml!");
+            plugin.getLogger().severe("Nie mozna zapisac lives.yml!");
             e.printStackTrace();
         }
     }
