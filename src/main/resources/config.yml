@@ -1,15 +1,13 @@
-# Czy życie ma być tracone TYLKO gdy gracz zostanie zabity przez innego gracza?
-# true  = tylko śmierć z rąk gracza zabiera życie
-# false = każda śmierć zabiera życie
+# Śmierć tylko od gracza zabiera życie?
 player-death-only: false
 
-# Domyślna liczba żyć przy pierwszym dołączeniu
+# Życia na start
 default-lives: 5
 
-# Maksymalna liczba żyć jaką gracz może mieć (za zabójstwa nie przekroczy)
+# Maksymalna liczba żyć
 max-lives: 5
 
-# Ile żyć dostaje gracz po odbanowaniu (po utracie wszystkich)
+# Życia po odbanowaniu
 lives-after-ban: 3
 
 # Czas bana w godzinach
