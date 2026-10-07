@@ -7,7 +7,7 @@ player-death-only: false
 default-lives: 5
 
 # Maksymalna liczba żyć jaką gracz może mieć (za zabójstwa nie przekroczy)
-max-lives: 7
+max-lives: 5
 
 # Ile żyć dostaje gracz po odbanowaniu (po utracie wszystkich)
 lives-after-ban: 3
