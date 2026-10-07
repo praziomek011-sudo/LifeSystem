@@ -9,33 +9,26 @@ public class LifeSystem extends JavaPlugin {
 
     @Override
     public void onEnable() {
-        // Zapisz domyślny config, jeśli nie istnieje
         saveDefaultConfig();
 
-        // Inicjalizacja menedżera żyć
         lifeManager = new LifeManager(this);
 
-        // Rejestracja listenerów
         getServer().getPluginManager().registerEvents(new PlayerListener(this), this);
 
-        // Rejestracja komend
         CommandHandler commandHandler = new CommandHandler(this);
         getCommand("lifesystem").setExecutor(commandHandler);
         getCommand("lifesystem").setTabCompleter(commandHandler);
 
-        // Rejestracja craftingu
         recipeManager = new RecipeManager(this);
         recipeManager.registerRecipes();
 
-        getLogger().info("LifeSystem został włączony!");
+        getLogger().info("LifeSystem wlaczony!");
     }
 
     @Override
     public void onDisable() {
-        if (lifeManager != null) {
-            lifeManager.saveData();
-        }
-        getLogger().info("LifeSystem został wyłączony.");
+        if (lifeManager != null) lifeManager.saveData();
+        getLogger().info("LifeSystem wylaczony.");
     }
 
     public LifeManager getLifeManager() {
