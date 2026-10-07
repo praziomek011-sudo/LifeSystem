@@ -16,7 +16,7 @@ public class NameTagManager {
         this.lifeManager = plugin.getLifeManager();
     }
 
-    /** Ustawia suffix (za nickiem) i nazwę w tabliście na podstawie żyć. */
+    /** Ustawia suffix z symbolem żyć (za nickiem) i odświeża tablistę. */
     public void updatePlayer(Player player) {
         if (player == null) return;
 
@@ -25,10 +25,10 @@ public class NameTagManager {
 
         String suffix = buildHeartSuffix(lives, max);
 
-        // Nazwa w tabliście: Nick + spacja + symbole
+        // Nazwa w tabliście: Nick + spacja + suffix
         player.setPlayerListName(ChatColor.WHITE + player.getName() + " " + suffix);
 
-        // Team suffix → wyświetla się nad głową i na czacie ZA nickiem
+        // Team suffix → pokazuje się nad głową i na czacie ZA nickiem
         Scoreboard board = Bukkit.getScoreboardManager().getMainScoreboard();
         Team team = board.getTeam(player.getName());
 
@@ -36,14 +36,17 @@ public class NameTagManager {
             team = board.registerNewTeam(player.getName());
         }
 
-        team.setSuffix(" " + suffix); // ⬅ SUFFIX zamiast prefix
+        team.setSuffix(" " + suffix);
         team.addEntry(player.getName());
     }
 
-    /** Buduje string z sercami i czaszkami. */
+    /**
+     * Buduje suffix: dokładnie tyle symboli ile wynosi max żyć.
+     * Za każde życie → ❤, za każde stracone → ☠.
+     * Np. max=5, lives=3 → ❤❤❤☠☠
+     */
     public String buildHeartSuffix(int lives, int max) {
         StringBuilder sb = new StringBuilder();
-
         for (int i = 0; i < max; i++) {
             if (i < lives) {
                 sb.append(ChatColor.RED).append("❤");
@@ -51,7 +54,6 @@ public class NameTagManager {
                 sb.append(ChatColor.DARK_GRAY).append("☠");
             }
         }
-
         return sb.toString();
     }
 }
