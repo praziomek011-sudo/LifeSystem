@@ -8,7 +8,6 @@ import org.bukkit.command.CommandExecutor;
 import org.bukkit.command.CommandSender;
 import org.bukkit.command.TabCompleter;
 import org.bukkit.entity.Player;
-import org.bukkit.inventory.ItemStack;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -17,24 +16,25 @@ public class CommandHandler implements CommandExecutor, TabCompleter {
 
     private final LifeSystem plugin;
     private final LifeManager lifeManager;
+    private final NameTagManager nameTagManager;
 
     public CommandHandler(LifeSystem plugin) {
         this.plugin = plugin;
         this.lifeManager = plugin.getLifeManager();
+        this.nameTagManager = new NameTagManager(plugin);
     }
 
     @Override
-    public boolean onCommand(CommandSender sender, Command command, String label, String[] args) {
-        if (args.length == 0) { sendHelp(sender); return true; }
+    public boolean onCommand(CommandSender sender, Command cmd, String label, String[] args) {
+        if (args.length == 0) { help(sender); return true; }
 
-        String sub = args[0].toLowerCase();
-        switch (sub) {
+        switch (args[0].toLowerCase()) {
             case "check":           return handleCheck(sender, args);
             case "give":            return handleGive(sender, args);
             case "life":            return handleLife(sender, args);
-            case "playerdeathonly": return handlePlayerDeathOnly(sender, args);
+            case "playerdeathonly": return handlePDO(sender, args);
             case "withdraw":        return handleWithdraw(sender, args);
-            default:                sendHelp(sender); return true;
+            default:                help(sender); return true;
         }
     }
 
@@ -42,21 +42,21 @@ public class CommandHandler implements CommandExecutor, TabCompleter {
         if (args.length == 1) {
             if (!(sender instanceof Player)) { sender.sendMessage(ChatColor.RED + "Tylko dla graczy!"); return true; }
             Player p = (Player) sender;
-            p.sendMessage(ChatColor.GOLD + "Masz " + ChatColor.YELLOW + lifeManager.getLives(p) + ChatColor.GOLD + " / " + lifeManager.getMaxLives() + " żyć.");
+            p.sendMessage(ChatColor.GOLD + "Masz " + ChatColor.YELLOW + lifeManager.getLives(p) + ChatColor.GOLD + " / " + lifeManager.getMaxLives() + " zyc.");
             return true;
         }
-        if (!sender.isOp()) { sender.sendMessage(ChatColor.RED + "Brak uprawnień!"); return true; }
+        if (!sender.isOp()) { sender.sendMessage(ChatColor.RED + "Brak uprawnien!"); return true; }
 
         OfflinePlayer t = Bukkit.getOfflinePlayer(args[1]);
         if (!t.hasPlayedBefore() && !t.isOnline()) { sender.sendMessage(ChatColor.RED + "Nie znaleziono gracza: " + args[1]); return true; }
-        sender.sendMessage(ChatColor.GOLD + "Gracz " + ChatColor.YELLOW + t.getName() + ChatColor.GOLD + " ma " + ChatColor.YELLOW + lifeManager.getLives(t) + ChatColor.GOLD + " / " + lifeManager.getMaxLives() + " żyć.");
+        sender.sendMessage(ChatColor.GOLD + "Gracz " + ChatColor.YELLOW + t.getName() + ChatColor.GOLD + " ma " + ChatColor.YELLOW + lifeManager.getLives(t) + ChatColor.GOLD + " / " + lifeManager.getMaxLives() + " zyc.");
         return true;
     }
 
     private boolean handleGive(CommandSender sender, String[] args) {
         if (!(sender instanceof Player)) { sender.sendMessage(ChatColor.RED + "Tylko dla graczy!"); return true; }
         if (args.length < 2 || !args[1].equalsIgnoreCase("life")) {
-            sender.sendMessage(ChatColor.RED + "Użycie: /lifesystem Give Life [nick]");
+            sender.sendMessage(ChatColor.RED + "Uzycie: /lifesystem Give Life [nick]");
             return true;
         }
 
@@ -64,72 +64,71 @@ public class CommandHandler implements CommandExecutor, TabCompleter {
         Player target = giver;
 
         if (args.length >= 3) {
-            if (!giver.isOp()) { giver.sendMessage(ChatColor.RED + "Brak uprawnień!"); return true; }
+            if (!giver.isOp()) { giver.sendMessage(ChatColor.RED + "Brak uprawnien!"); return true; }
             target = Bukkit.getPlayerExact(args[2]);
-            if (target == null) { giver.sendMessage(ChatColor.RED + "Gracz musi być online: " + args[2]); return true; }
+            if (target == null) { giver.sendMessage(ChatColor.RED + "Gracz musi byc online: " + args[2]); return true; }
         }
 
         target.getInventory().addItem(RecipeManager.createLifeItem(1));
-        target.sendMessage(ChatColor.GREEN + "❤ Otrzymałeś item Życie! Kliknij PPM aby użyć.");
-        giver.sendMessage(ChatColor.GREEN + "❤ Dano item Życie graczowi " + target.getName());
+        target.sendMessage(ChatColor.GREEN + "Otrzymales item Zycie! Kliknij PPM aby uzyc.");
+        giver.sendMessage(ChatColor.GREEN + "Dano item Zycie graczowi " + target.getName());
         return true;
     }
 
     private boolean handleLife(CommandSender sender, String[] args) {
         if (args.length < 4 || !args[1].equalsIgnoreCase("set")) {
-            sender.sendMessage(ChatColor.RED + "Użycie: /lifesystem Life set [nick] [ilość]");
+            sender.sendMessage(ChatColor.RED + "Uzycie: /lifesystem Life set [nick] [ilosc]");
             return true;
         }
-        if (!sender.isOp()) { sender.sendMessage(ChatColor.RED + "Brak uprawnień!"); return true; }
+        if (!sender.isOp()) { sender.sendMessage(ChatColor.RED + "Brak uprawnien!"); return true; }
 
         OfflinePlayer t = Bukkit.getOfflinePlayer(args[2]);
         if (!t.hasPlayedBefore() && !t.isOnline()) { sender.sendMessage(ChatColor.RED + "Nie znaleziono gracza: " + args[2]); return true; }
 
         int amount;
         try { amount = Integer.parseInt(args[3]); }
-        catch (NumberFormatException e) { sender.sendMessage(ChatColor.RED + "Nieprawidłowa ilość!"); return true; }
+        catch (NumberFormatException e) { sender.sendMessage(ChatColor.RED + "Nieprawidlowa ilosc!"); return true; }
 
         lifeManager.setLives(t, amount);
-        sender.sendMessage(ChatColor.GREEN + "Ustawiono " + amount + " żyć graczowi " + t.getName() + ".");
+        sender.sendMessage(ChatColor.GREEN + "Ustawiono " + amount + " zyc graczowi " + t.getName() + ".");
+
+        if (t.isOnline() && t.getPlayer() != null) nameTagManager.updatePlayer(t.getPlayer());
         return true;
     }
 
-    /** /lifesystem withdraw [ilość] – zamienia życia na itemy. */
     private boolean handleWithdraw(CommandSender sender, String[] args) {
         if (!(sender instanceof Player)) { sender.sendMessage(ChatColor.RED + "Tylko dla graczy!"); return true; }
         Player p = (Player) sender;
 
-        if (args.length < 2) {
-            p.sendMessage(ChatColor.RED + "Użycie: /lifesystem withdraw [ilość]");
-            return true;
-        }
+        if (args.length < 2) { p.sendMessage(ChatColor.RED + "Uzycie: /lifesystem withdraw [ilosc]"); return true; }
 
         int amount;
         try { amount = Integer.parseInt(args[1]); }
-        catch (NumberFormatException e) { p.sendMessage(ChatColor.RED + "Nieprawidłowa ilość!"); return true; }
+        catch (NumberFormatException e) { p.sendMessage(ChatColor.RED + "Nieprawidlowa ilosc!"); return true; }
 
-        if (amount <= 0) { p.sendMessage(ChatColor.RED + "Ilość musi być większa od 0!"); return true; }
+        if (amount <= 0) { p.sendMessage(ChatColor.RED + "Ilosc musi byc > 0!"); return true; }
 
         int lives = lifeManager.getLives(p);
         if (lives - amount < 1) {
-            p.sendMessage(ChatColor.RED + "Musisz zachować co najmniej 1 życie! Masz " + lives + " żyć.");
+            p.sendMessage(ChatColor.RED + "Musisz zachowac min. 1 zycie! Masz " + lives + " zyc.");
             return true;
         }
 
         lifeManager.setLives(p, lives - amount);
         p.getInventory().addItem(RecipeManager.createLifeItem(amount));
-        p.sendMessage(ChatColor.GREEN + "❤ Wypłacono " + amount + " żyć jako itemy. Zostało Ci: " + ChatColor.YELLOW + (lives - amount) + ChatColor.GREEN + " żyć.");
+        p.sendMessage(ChatColor.GREEN + "Wyplacono " + amount + " zyc jako itemy. Zostalo: " + ChatColor.YELLOW + (lives - amount) + ChatColor.GREEN + " zyc.");
+        nameTagManager.updatePlayer(p);
         return true;
     }
 
-    private boolean handlePlayerDeathOnly(CommandSender sender, String[] args) {
-        if (!sender.isOp()) { sender.sendMessage(ChatColor.RED + "Brak uprawnień!"); return true; }
-        if (args.length < 2) { sender.sendMessage(ChatColor.RED + "Użycie: /lifesystem PlayerDeathOnly on/off"); return true; }
+    private boolean handlePDO(CommandSender sender, String[] args) {
+        if (!sender.isOp()) { sender.sendMessage(ChatColor.RED + "Brak uprawnien!"); return true; }
+        if (args.length < 2) { sender.sendMessage(ChatColor.RED + "Uzycie: /lifesystem PlayerDeathOnly on/off"); return true; }
 
         boolean value;
         if (args[1].equalsIgnoreCase("on")) value = true;
         else if (args[1].equalsIgnoreCase("off")) value = false;
-        else { sender.sendMessage(ChatColor.RED + "Użyj on lub off!"); return true; }
+        else { sender.sendMessage(ChatColor.RED + "Uzyj on lub off!"); return true; }
 
         plugin.getConfig().set("player-death-only", value);
         plugin.saveConfig();
@@ -137,20 +136,20 @@ public class CommandHandler implements CommandExecutor, TabCompleter {
         return true;
     }
 
-    private void sendHelp(CommandSender s) {
+    private void help(CommandSender s) {
         s.sendMessage(ChatColor.GOLD + "===== LifeSystem =====");
-        s.sendMessage(ChatColor.YELLOW + "/lifesystem Check" + ChatColor.GRAY + " – swoje życia");
-        s.sendMessage(ChatColor.YELLOW + "/lifesystem withdraw [ilość]" + ChatColor.GRAY + " – zamień życia na itemy");
+        s.sendMessage(ChatColor.YELLOW + "/lifesystem Check" + ChatColor.GRAY + " - swoje zycia");
+        s.sendMessage(ChatColor.YELLOW + "/lifesystem withdraw [ilosc]" + ChatColor.GRAY + " - zamien zycia na itemy");
         if (s.isOp()) {
             s.sendMessage(ChatColor.YELLOW + "/lifesystem Check [nick]");
             s.sendMessage(ChatColor.YELLOW + "/lifesystem Give Life [nick]");
-            s.sendMessage(ChatColor.YELLOW + "/lifesystem Life set [nick] [ilość]");
+            s.sendMessage(ChatColor.YELLOW + "/lifesystem Life set [nick] [ilosc]");
             s.sendMessage(ChatColor.YELLOW + "/lifesystem PlayerDeathOnly on/off");
         }
     }
 
     @Override
-    public List<String> onTabComplete(CommandSender sender, Command command, String alias, String[] args) {
+    public List<String> onTabComplete(CommandSender sender, Command cmd, String alias, String[] args) {
         List<String> c = new ArrayList<>();
         if (args.length == 1) {
             c.add("check");
