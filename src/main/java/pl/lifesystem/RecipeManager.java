@@ -1,9 +1,7 @@
 package pl.lifesystem;
 
-import org.bukkit.Bukkit;
 import org.bukkit.Material;
 import org.bukkit.NamespacedKey;
-import org.bukkit.entity.Player;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.ShapedRecipe;
 import org.bukkit.inventory.meta.ItemMeta;
@@ -40,11 +38,6 @@ public class RecipeManager {
     }
 
     public void registerRecipes() {
-        registerLifeRecipe();
-        registerTrackerRecipe();
-    }
-
-    private void registerLifeRecipe() {
         NamespacedKey key = new NamespacedKey(plugin, "life_recipe");
         plugin.getServer().removeRecipe(key);
 
@@ -54,21 +47,5 @@ public class RecipeManager {
         recipe.setIngredient('N', Material.NETHER_STAR);
         recipe.setIngredient('O', Material.OMINOUS_TRIAL_KEY);
         plugin.getServer().addRecipe(recipe);
-    }
-
-    /**
-     * Przepis na Tracker.
-     * Wzór:
-     *   ŻYCIE / RECOVERY_COMPASS / ŻYCIE
-     *   NIC   / PLAYER_HEAD      / NIC
-     *   NIC   / NIC              / NIC
-     *
-     * Głowa jest dynamiczna – używamy PlayerHead z online gracza przy craftowaniu.
-     * Dlatego zamiast ShapedRecipe tworzymy "dynamiczny" przepis przez
-     * sprawdzanie w PrepareItemCraftEvent (patrz PlayerListener).
-     */
-    private void registerTrackerRecipe() {
-        // Nie rejestrujemy tu standardowego przepisu – jest dynamiczny (głowa gracza).
-        // Zamiast tego w PlayerListener obsługujemy PrepareItemCraftEvent.
     }
 }
