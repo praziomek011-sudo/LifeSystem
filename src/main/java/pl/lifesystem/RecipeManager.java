@@ -1,7 +1,9 @@
 package pl.lifesystem;
 
+import org.bukkit.Bukkit;
 import org.bukkit.Material;
 import org.bukkit.NamespacedKey;
+import org.bukkit.entity.Player;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.ShapedRecipe;
 import org.bukkit.inventory.meta.ItemMeta;
@@ -24,8 +26,7 @@ public class RecipeManager {
         ItemMeta meta = item.getItemMeta();
         meta.setDisplayName("\u00A7c\u2764 \u00A7f\u017Bycie");
         meta.setLore(Arrays.asList(
-                "\u00A77Kliknij \u00A7ePPM\u00A77, aby dodac sobie 1 zycie.",
-                "\u00A77Craftuj lub otrzymaj od admina."
+                "\u00A77Kliknij \u00A7ePPM\u00A77, aby dodac sobie 1 zycie."
         ));
         meta.getPersistentDataContainer().set(LIFE_KEY, PersistentDataType.BYTE, (byte) 1);
         item.setItemMeta(meta);
@@ -39,17 +40,35 @@ public class RecipeManager {
     }
 
     public void registerRecipes() {
-        ItemStack result = createLifeItem(1);
+        registerLifeRecipe();
+        registerTrackerRecipe();
+    }
 
+    private void registerLifeRecipe() {
         NamespacedKey key = new NamespacedKey(plugin, "life_recipe");
         plugin.getServer().removeRecipe(key);
 
-        ShapedRecipe recipe = new ShapedRecipe(key, result);
+        ShapedRecipe recipe = new ShapedRecipe(key, createLifeItem(1));
         recipe.shape(" G ", "NON", " G ");
         recipe.setIngredient('G', Material.GHAST_TEAR);
         recipe.setIngredient('N', Material.NETHER_STAR);
         recipe.setIngredient('O', Material.OMINOUS_TRIAL_KEY);
-
         plugin.getServer().addRecipe(recipe);
+    }
+
+    /**
+     * Przepis na Tracker.
+     * Wzór:
+     *   ŻYCIE / RECOVERY_COMPASS / ŻYCIE
+     *   NIC   / PLAYER_HEAD      / NIC
+     *   NIC   / NIC              / NIC
+     *
+     * Głowa jest dynamiczna – używamy PlayerHead z online gracza przy craftowaniu.
+     * Dlatego zamiast ShapedRecipe tworzymy "dynamiczny" przepis przez
+     * sprawdzanie w PrepareItemCraftEvent (patrz PlayerListener).
+     */
+    private void registerTrackerRecipe() {
+        // Nie rejestrujemy tu standardowego przepisu – jest dynamiczny (głowa gracza).
+        // Zamiast tego w PlayerListener obsługujemy PrepareItemCraftEvent.
     }
 }
