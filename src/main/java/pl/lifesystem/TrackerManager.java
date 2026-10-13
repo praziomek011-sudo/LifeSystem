@@ -131,11 +131,12 @@ public class TrackerManager {
         player.spigot().sendMessage(ChatMessageType.ACTION_BAR, TextComponent.fromLegacyText(message));
     }
 
-    /** Czerwony promień particles, 10 bloków, płasko w stronę targetu. */
+    /**
+     * Czerwony promień 10 bloków – widoczny TYLKO dla holdera.
+     * Używamy holder.spawnParticle(...) – dzięki temu tylko on widzi cząsteczki.
+     * Particle.DUST z czerwonym kolorem (END_ROD nie da się pokolorować).
+     */
     private void drawRedBeam(Player holder, Location from, Location to) {
-        World world = from.getWorld();
-        if (world == null) return;
-
         Vector dir = to.toVector().subtract(from.toVector());
         dir.setY(0);
         double dist = dir.length();
@@ -144,13 +145,14 @@ public class TrackerManager {
 
         Location start = from.clone().add(0, 1.2, 0);
         double maxLen = Math.min(10.0, dist);
-        double step = 0.5;
+        double step = 0.4;
 
-        Particle.DustOptions red = new Particle.DustOptions(Color.RED, 1.2f);
+        Particle.DustOptions red = new Particle.DustOptions(Color.RED, 1.0f);
 
         for (double d = 0; d <= maxLen; d += step) {
             Location p = start.clone().add(dir.clone().multiply(d));
-            world.spawnParticle(Particle.DUST, p, 1, 0, 0, 0, 0, red);
+            // holder.spawnParticle – widzi to TYLKO holder
+            holder.spawnParticle(Particle.DUST, p, 1, 0, 0, 0, 0, red);
         }
     }
 }
