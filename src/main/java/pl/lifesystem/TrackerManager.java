@@ -17,11 +17,14 @@ public class TrackerManager {
 
     public static NamespacedKey TRACKER_KEY;
     public static NamespacedKey TARGET_KEY;
+    public static NamespacedKey EXPIRY_KEY;
     public static final String GUI_TITLE = ChatColor.DARK_PURPLE + "Wybierz gracza";
+    public static final long TRACKER_DURATION_MS = 10L * 60L * 1000L; // 10 minut
 
     public TrackerManager(LifeSystem plugin) {
         TRACKER_KEY = new NamespacedKey(plugin, "player_tracker");
         TARGET_KEY = new NamespacedKey(plugin, "tracker_target");
+        EXPIRY_KEY = new NamespacedKey(plugin, "tracker_expiry");
     }
 
     public static ItemStack createTracker() {
@@ -30,7 +33,8 @@ public class TrackerManager {
         meta.setDisplayName(ChatColor.AQUA + "Tracker");
         meta.setLore(Arrays.asList(
                 ChatColor.GRAY + "Kliknij PPM aby wybrac gracza",
-                ChatColor.GRAY + "Pozniej nie da sie zmienic"
+                ChatColor.GRAY + "Pozniej nie da sie zmienic",
+                ChatColor.DARK_GRAY + "Tracker dziala 10 minut"
         ));
         meta.getPersistentDataContainer().set(TRACKER_KEY, PersistentDataType.BYTE, (byte) 1);
         item.setItemMeta(meta);
@@ -50,16 +54,31 @@ public class TrackerManager {
         try { return UUID.fromString(s); } catch (IllegalArgumentException e) { return null; }
     }
 
+    public static long getExpiry(ItemStack item) {
+        if (!isTracker(item)) return 0L;
+        Long l = item.getItemMeta().getPersistentDataContainer().get(EXPIRY_KEY, PersistentDataType.LONG);
+        return l == null ? 0L : l;
+    }
+
+    public static boolean isExpired(ItemStack item) {
+        long exp = getExpiry(item);
+        return exp > 0 && System.currentTimeMillis() >= exp;
+    }
+
     public static void setTarget(ItemStack item, UUID uuid) {
         if (!isTracker(item)) return;
         ItemMeta meta = item.getItemMeta();
         meta.getPersistentDataContainer().set(TARGET_KEY, PersistentDataType.STRING, uuid.toString());
+        meta.getPersistentDataContainer().set(EXPIRY_KEY, PersistentDataType.LONG,
+                System.currentTimeMillis() + TRACKER_DURATION_MS);
+
         String name = Bukkit.getOfflinePlayer(uuid).getName();
         if (name == null) name = "???";
         meta.setDisplayName(ChatColor.AQUA + "Tracker: " + ChatColor.WHITE + name);
         meta.setLore(Arrays.asList(
                 ChatColor.GRAY + "Sledzi: " + ChatColor.WHITE + name,
-                ChatColor.DARK_RED + "Zablokowany"
+                ChatColor.DARK_RED + "Zablokowany",
+                ChatColor.DARK_GRAY + "Wygasa po 10 minutach"
         ));
         item.setItemMeta(meta);
     }
@@ -89,6 +108,12 @@ public class TrackerManager {
             UUID targetUUID = getTarget(item);
             if (targetUUID == null) continue;
 
+            // Sprawdź timer
+            if (isExpired(item)) {
+                sendActionBar(holder, ChatColor.DARK_RED + "Tracker wygasl!");
+                continue;
+            }
+
             Player target = Bukkit.getPlayer(targetUUID);
             if (target == null || !target.isOnline()) {
                 sendActionBar(holder, ChatColor.RED + "Tracker: gracz offline");
@@ -104,25 +129,47 @@ public class TrackerManager {
             Location tLoc = target.getLocation();
             Location hLoc = holder.getLocation();
 
+            // Pozostały czas
+            long remainingMs = getExpiry(item) - System.currentTimeMillis();
+            long totalSec = remainingMs / 1000L;
+            long min = totalSec / 60L;
+            long sec = totalSec % 60L;
+            String timeStr = String.format("%d:%02d", min, sec);
+
             String bar = ChatColor.AQUA + "Tracker " + ChatColor.WHITE + target.getName()
                     + ChatColor.GRAY + " | "
                     + ChatColor.YELLOW + "X:" + tLoc.getBlockX()
                     + " Y:" + tLoc.getBlockY()
                     + " Z:" + tLoc.getBlockZ()
                     + ChatColor.GRAY + " | "
-                    + ChatColor.GREEN + (int) hLoc.distance(tLoc) + "m";
+                    + ChatColor.GREEN + (int) hLoc.distance(tLoc) + "m"
+                    + ChatColor.GRAY + " | "
+                    + ChatColor.GOLD + timeStr;
             sendActionBar(holder, bar);
 
             holder.setCompassTarget(tLoc);
             drawRedBeam(holder, hLoc, tLoc);
         }
 
-        for (UUID uuid : observed) {
-            Player target = Bukkit.getPlayer(uuid);
-            if (target != null && target.isOnline()) {
-                sendActionBar(target, ChatColor.RED + "Czujesz sie obserwowany...");
+        // Śledzeni gracze widzą animowany komunikat
+        if (!observed.isEmpty()) {
+            String dots = animatedDots();
+            String msg = ChatColor.RED + "Czujesz sie obserwowany" + ChatColor.DARK_RED + dots;
+            for (UUID uuid : observed) {
+                Player target = Bukkit.getPlayer(uuid);
+                if (target != null && target.isOnline()) {
+                    sendActionBar(target, msg);
+                }
             }
         }
+    }
+
+    /** Animowane kropki: "", ".", "..", "..." – zmieniają się co 0.5 sekundy. */
+    private String animatedDots() {
+        int phase = (int) ((System.currentTimeMillis() / 500L) % 4);
+        StringBuilder sb = new StringBuilder();
+        for (int i = 0; i < phase; i++) sb.append(".");
+        return sb.toString();
     }
 
     private void sendActionBar(Player player, String message) {
@@ -131,7 +178,6 @@ public class TrackerManager {
 
     /**
      * Czerwony promień 10 bloków – widoczny TYLKO dla holdera.
-     * Particle.REDSTONE z czerwonym kolorem (stara nazwa DUST).
      */
     @SuppressWarnings("deprecation")
     private void drawRedBeam(Player holder, Location from, Location to) {
@@ -149,7 +195,7 @@ public class TrackerManager {
 
         for (double d = 0; d <= maxLen; d += step) {
             Location p = start.clone().add(dir.clone().multiply(d));
-            holder.spawnParticle(Particle.REDSTONE, p, 1, 0, 0, 0, 0, red);
+            holder.spawnParticle(Particle.DUST, p, 1, 0, 0, 0, 0, red);
         }
     }
 }
