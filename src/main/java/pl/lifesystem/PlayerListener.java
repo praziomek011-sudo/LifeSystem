@@ -10,6 +10,7 @@ import org.bukkit.event.EventPriority;
 import org.bukkit.event.Listener;
 import org.bukkit.event.block.Action;
 import org.bukkit.event.entity.PlayerDeathEvent;
+import org.bukkit.event.inventory.InventoryClickEvent;
 import org.bukkit.event.inventory.PrepareItemCraftEvent;
 import org.bukkit.event.player.PlayerInteractEvent;
 import org.bukkit.event.player.PlayerJoinEvent;
@@ -18,6 +19,7 @@ import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.SkullMeta;
 
 import java.util.Date;
+import java.util.UUID;
 
 public class PlayerListener implements Listener {
 
@@ -32,13 +34,10 @@ public class PlayerListener implements Listener {
         this.nameTagManager = new NameTagManager(plugin);
         this.trackerManager = new TrackerManager(plugin);
 
-        Bukkit.getScheduler().runTaskTimer(plugin, () -> {
-            for (Player p : Bukkit.getOnlinePlayers()) {
-                trackerManager.tick(p);
-            }
-        }, 20L, 5L);
+        Bukkit.getScheduler().runTaskTimer(plugin, () -> trackerManager.tickAll(), 20L, 5L);
     }
 
+    // ---------- JOIN ----------
     @EventHandler
     public void onJoin(PlayerJoinEvent event) {
         Player player = event.getPlayer();
@@ -53,6 +52,7 @@ public class PlayerListener implements Listener {
         Bukkit.getScheduler().runTaskLater(plugin, () -> nameTagManager.updatePlayer(player), 20L);
     }
 
+    // ---------- PPM ----------
     @EventHandler
     public void onInteract(PlayerInteractEvent event) {
         if (event.getHand() != EquipmentSlot.HAND) return;
@@ -60,8 +60,20 @@ public class PlayerListener implements Listener {
 
         Player player = event.getPlayer();
         ItemStack item = player.getInventory().getItemInMainHand();
-        if (!RecipeManager.isLifeItem(item)) return;
 
+        // --- Tracker: PPM otwiera GUI lub blokuje ---
+        if (TrackerManager.isTracker(item)) {
+            event.setCancelled(true);
+            if (TrackerManager.getTarget(item) != null) {
+                player.sendMessage(ChatColor.RED + "Ten tracker jest juz zablokowany!");
+                return;
+            }
+            trackerManager.openSelectGui(player);
+            return;
+        }
+
+        // --- Życie: PPM dodaje życie ---
+        if (!RecipeManager.isLifeItem(item)) return;
         event.setCancelled(true);
 
         int current = lifeManager.getLives(player);
@@ -80,6 +92,39 @@ public class PlayerListener implements Listener {
         nameTagManager.updatePlayer(player);
     }
 
+    // ---------- Klik w GUI trackera ----------
+    @EventHandler
+    public void onInventoryClick(InventoryClickEvent event) {
+        if (!(event.getWhoClicked() instanceof Player)) return;
+        if (event.getView().getTitle() == null) return;
+        if (!event.getView().getTitle().equals(TrackerManager.GUI_TITLE)) return;
+
+        event.setCancelled(true);
+
+        Player player = (Player) event.getWhoClicked();
+        ItemStack clicked = event.getCurrentItem();
+        if (clicked == null || clicked.getType() != Material.PLAYER_HEAD) return;
+        if (!(clicked.getItemMeta() instanceof SkullMeta)) return;
+
+        SkullMeta sm = (SkullMeta) clicked.getItemMeta();
+        if (sm.getOwningPlayer() == null) return;
+
+        UUID targetUUID = sm.getOwningPlayer().getUniqueId();
+        String targetName = sm.getOwningPlayer().getName();
+
+        ItemStack tracker = player.getInventory().getItemInMainHand();
+        if (!TrackerManager.isTracker(tracker)) {
+            player.closeInventory();
+            return;
+        }
+
+        TrackerManager.setTarget(tracker, targetUUID);
+        player.getInventory().setItemInMainHand(tracker);
+        player.closeInventory();
+        player.sendMessage(ChatColor.GREEN + "Tracker zablokowany na: " + ChatColor.YELLOW + targetName);
+    }
+
+    // ---------- ŚMIERĆ ----------
     @EventHandler(priority = EventPriority.HIGH)
     public void onDeath(PlayerDeathEvent event) {
         Player victim = event.getEntity();
@@ -116,11 +161,11 @@ public class PlayerListener implements Listener {
         Bukkit.broadcastMessage(ChatColor.DARK_RED + "[LifeSystem] " + ChatColor.RED + player.getName() + " stracil wszystkie zycia i dostal bana na " + hours + "h!");
     }
 
+    // ---------- CRAFTING TRACKERA ----------
     @EventHandler
     public void onPrepareCraft(PrepareItemCraftEvent event) {
         ItemStack[] matrix = event.getInventory().getMatrix();
 
-        ItemStack head = null;
         int lifeCount = 0, compassCount = 0, headCount = 0;
         int totalItems = 0;
 
@@ -129,20 +174,13 @@ public class PlayerListener implements Listener {
             totalItems++;
             if (RecipeManager.isLifeItem(is)) lifeCount++;
             else if (is.getType() == Material.RECOVERY_COMPASS) compassCount++;
-            else if (is.getType() == Material.PLAYER_HEAD) { headCount++; head = is; }
+            else if (is.getType() == Material.PLAYER_HEAD) headCount++;
             else return;
         }
 
+        // 1x Życie + 1x Recovery Compass + 1x Player Head = Tracker
         if (lifeCount != 1 || compassCount != 1 || headCount != 1 || totalItems != 3) return;
 
-        if (!(head.getItemMeta() instanceof SkullMeta)) return;
-        SkullMeta sm = (SkullMeta) head.getItemMeta();
-        if (sm.getOwningPlayer() == null) return;
-
-        String targetName = sm.getOwningPlayer().getName();
-        if (targetName == null) return;
-
-        ItemStack result = trackerManager.createTracker(targetName, sm.getOwningPlayer().getUniqueId());
-        event.getInventory().setResult(result);
+        event.getInventory().setResult(TrackerManager.createTracker());
     }
 }
