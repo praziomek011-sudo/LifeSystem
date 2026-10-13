@@ -14,32 +14,28 @@ import java.util.UUID;
 
 public class TrackerManager {
 
-    private final LifeSystem plugin;
     private final LifeManager lifeManager;
     public static NamespacedKey TRACKER_KEY;
 
     public TrackerManager(LifeSystem plugin) {
-        this.plugin = plugin;
         this.lifeManager = plugin.getLifeManager();
         TRACKER_KEY = new NamespacedKey(plugin, "player_tracker");
     }
 
-    /** Tworzy item "Tracker" śledzący konkretnego gracza. */
     public ItemStack createTracker(String targetName, UUID targetUUID) {
         ItemStack item = new ItemStack(Material.RECOVERY_COMPASS);
         ItemMeta meta = item.getItemMeta();
         meta.setDisplayName(ChatColor.AQUA + "Tracker: " + ChatColor.WHITE + targetName);
         meta.setLore(Arrays.asList(
                 ChatColor.GRAY + "Sledzi gracza " + ChatColor.WHITE + targetName,
-                ChatColor.GRAY + "Koordynaty: " + ChatColor.YELLOW + "nad hotbarem",
-                ChatColor.GRAY + "Sciezka: " + ChatColor.AQUA + "10 blokow"
+                ChatColor.GRAY + "Koordynaty nad hotbarem",
+                ChatColor.GRAY + "Sciezka z czasteczek: 10 blokow"
         ));
         meta.getPersistentDataContainer().set(TRACKER_KEY, PersistentDataType.STRING, targetUUID.toString());
         item.setItemMeta(meta);
         return item;
     }
 
-    /** Zwraca UUID śledzonego gracza (lub null, jeśli to nie tracker). */
     public static UUID getTrackedUUID(ItemStack item) {
         if (item == null || item.getType() != Material.RECOVERY_COMPASS) return null;
         if (!item.hasItemMeta()) return null;
@@ -48,7 +44,6 @@ public class TrackerManager {
         try { return UUID.fromString(s); } catch (IllegalArgumentException e) { return null; }
     }
 
-    /** Wywoływane co 5 ticków dla każdego gracza. */
     public void tick(Player holder) {
         ItemStack item = holder.getInventory().getItemInMainHand();
         UUID targetUUID = getTrackedUUID(item);
@@ -67,7 +62,6 @@ public class TrackerManager {
         Location tLoc = target.getLocation();
         Location hLoc = holder.getLocation();
 
-        // 1) Action Bar z koordynatami
         String bar = ChatColor.AQUA + "Tracker " + ChatColor.WHITE + target.getName()
                 + ChatColor.GRAY + " | "
                 + ChatColor.YELLOW + "X:" + tLoc.getBlockX()
@@ -77,19 +71,14 @@ public class TrackerManager {
                 + ChatColor.GREEN + (int) hLoc.distance(tLoc) + "m";
         sendActionBar(holder, bar);
 
-        // 2) Kompas wskazuje na gracza
         holder.setCompassTarget(tLoc);
-
-        // 3) Particles
         drawParticleLine(holder, hLoc, tLoc);
     }
 
-    /** Action bar w stylu Spigot (nie Paper). */
     private void sendActionBar(Player player, String message) {
         player.spigot().sendMessage(ChatMessageType.ACTION_BAR, TextComponent.fromLegacyText(message));
     }
 
-    /** Linia particles od gracza w stronę targetu (max 10 bloków). */
     private void drawParticleLine(Player holder, Location from, Location to) {
         World world = from.getWorld();
         if (world == null) return;
@@ -101,7 +90,6 @@ public class TrackerManager {
         dir.normalize();
 
         Location start = from.clone().add(0, 1.2, 0);
-
         double maxLen = Math.min(10.0, dist);
         double step = 0.5;
 
