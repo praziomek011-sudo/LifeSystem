@@ -52,22 +52,41 @@ public class CommandHandler implements CommandExecutor, TabCompleter {
         return true;
     }
 
+    /**
+     * /lifesystem Give Life [nick]     → daje item Życie
+     * /lifesystem Give Tracker [nick]  → daje Tracker (OP dla innych)
+     */
     private boolean handleGive(CommandSender sender, String[] args) {
         if (!(sender instanceof Player)) { sender.sendMessage(ChatColor.RED + "Tylko dla graczy!"); return true; }
-        if (args.length < 2 || !args[1].equalsIgnoreCase("life")) {
-            sender.sendMessage(ChatColor.RED + "Uzycie: /lifesystem Give Life [nick]");
+        if (args.length < 2) {
+            sender.sendMessage(ChatColor.RED + "Uzycie: /lifesystem Give <Life|Tracker> [nick]");
             return true;
         }
+
+        String what = args[1].toLowerCase();
+        if (!what.equals("life") && !what.equals("tracker")) {
+            sender.sendMessage(ChatColor.RED + "Uzycie: /lifesystem Give <Life|Tracker> [nick]");
+            return true;
+        }
+
         Player giver = (Player) sender;
         Player target = giver;
+
         if (args.length >= 3) {
             if (!giver.isOp()) { giver.sendMessage(ChatColor.RED + "Brak uprawnien!"); return true; }
             target = Bukkit.getPlayerExact(args[2]);
             if (target == null) { giver.sendMessage(ChatColor.RED + "Gracz musi byc online: " + args[2]); return true; }
         }
-        target.getInventory().addItem(RecipeManager.createLifeItem(1));
-        target.sendMessage(ChatColor.GREEN + "Otrzymales item Zycie! Kliknij PPM aby uzyc.");
-        giver.sendMessage(ChatColor.GREEN + "Dano item Zycie graczowi " + target.getName());
+
+        if (what.equals("life")) {
+            target.getInventory().addItem(RecipeManager.createLifeItem(1));
+            target.sendMessage(ChatColor.GREEN + "Otrzymales item Zycie! Kliknij PPM aby uzyc.");
+            giver.sendMessage(ChatColor.GREEN + "Dano item Zycie graczowi " + target.getName());
+        } else {
+            target.getInventory().addItem(TrackerManager.createTracker());
+            target.sendMessage(ChatColor.GREEN + "Otrzymales Tracker! Kliknij PPM aby wybrac gracza.");
+            giver.sendMessage(ChatColor.GREEN + "Dano Tracker graczowi " + target.getName());
+        }
         return true;
     }
 
@@ -132,9 +151,10 @@ public class CommandHandler implements CommandExecutor, TabCompleter {
         s.sendMessage(ChatColor.GOLD + "===== LifeSystem =====");
         s.sendMessage(ChatColor.YELLOW + "/lifesystem Check");
         s.sendMessage(ChatColor.YELLOW + "/lifesystem withdraw [ilosc]");
+        s.sendMessage(ChatColor.YELLOW + "/lifesystem Give <Life|Tracker>");
         if (s.isOp()) {
             s.sendMessage(ChatColor.YELLOW + "/lifesystem Check [nick]");
-            s.sendMessage(ChatColor.YELLOW + "/lifesystem Give Life [nick]");
+            s.sendMessage(ChatColor.YELLOW + "/lifesystem Give <Life|Tracker> [nick]");
             s.sendMessage(ChatColor.YELLOW + "/lifesystem Life set [nick] [ilosc]");
             s.sendMessage(ChatColor.YELLOW + "/lifesystem PlayerDeathOnly on/off");
         }
@@ -149,7 +169,7 @@ public class CommandHandler implements CommandExecutor, TabCompleter {
             c.add("withdraw");
             if (sender.isOp()) { c.add("life"); c.add("playerdeathonly"); }
         } else if (args.length == 2) {
-            if (args[0].equalsIgnoreCase("give")) c.add("life");
+            if (args[0].equalsIgnoreCase("give")) { c.add("life"); c.add("tracker"); }
             if (args[0].equalsIgnoreCase("life")) c.add("set");
             if (args[0].equalsIgnoreCase("playerdeathonly")) { c.add("on"); c.add("off"); }
             if (args[0].equalsIgnoreCase("withdraw")) c.add("1");
