@@ -1,6 +1,9 @@
 package pl.lifesystem;
 
-import org.bukkit.*;
+import org.bukkit.BanList;
+import org.bukkit.Bukkit;
+import org.bukkit.ChatColor;
+import org.bukkit.Material;
 import org.bukkit.entity.Player;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.EventPriority;
@@ -29,7 +32,6 @@ public class PlayerListener implements Listener {
         this.nameTagManager = new NameTagManager(plugin);
         this.trackerManager = new TrackerManager(plugin);
 
-        // Pętla trackera – co 5 ticków (0.25s)
         Bukkit.getScheduler().runTaskTimer(plugin, () -> {
             for (Player p : Bukkit.getOnlinePlayers()) {
                 trackerManager.tick(p);
@@ -37,7 +39,6 @@ public class PlayerListener implements Listener {
         }, 20L, 5L);
     }
 
-    // ---------- JOIN ----------
     @EventHandler
     public void onJoin(PlayerJoinEvent event) {
         Player player = event.getPlayer();
@@ -52,7 +53,6 @@ public class PlayerListener implements Listener {
         Bukkit.getScheduler().runTaskLater(plugin, () -> nameTagManager.updatePlayer(player), 20L);
     }
 
-    // ---------- PPM itemem Życie ----------
     @EventHandler
     public void onInteract(PlayerInteractEvent event) {
         if (event.getHand() != EquipmentSlot.HAND) return;
@@ -80,7 +80,6 @@ public class PlayerListener implements Listener {
         nameTagManager.updatePlayer(player);
     }
 
-    // ---------- ŚMIERĆ ----------
     @EventHandler(priority = EventPriority.HIGH)
     public void onDeath(PlayerDeathEvent event) {
         Player victim = event.getEntity();
@@ -117,32 +116,25 @@ public class PlayerListener implements Listener {
         Bukkit.broadcastMessage(ChatColor.DARK_RED + "[LifeSystem] " + ChatColor.RED + player.getName() + " stracil wszystkie zycia i dostal bana na " + hours + "h!");
     }
 
-    // ---------- DYNAMICZNY CRAFTING TRACKERA ----------
-    /**
-     * Recept: 1x ŻYCIE + 1x RECOVERY_COMPASS + 1x PLAYER_HEAD (dowolny układ).
-     * Wynik: Tracker śledzący właściciela głowy.
-     */
     @EventHandler
     public void onPrepareCraft(PrepareItemCraftEvent event) {
         ItemStack[] matrix = event.getInventory().getMatrix();
 
-        ItemStack compass = null, head = null;
+        ItemStack head = null;
         int lifeCount = 0, compassCount = 0, headCount = 0;
         int totalItems = 0;
 
         for (ItemStack is : matrix) {
             if (is == null || is.getType() == Material.AIR) continue;
             totalItems++;
-            if (RecipeManager.isLifeItem(is)) { lifeCount++; }
-            else if (is.getType() == Material.RECOVERY_COMPASS) { compassCount++; compass = is; }
+            if (RecipeManager.isLifeItem(is)) lifeCount++;
+            else if (is.getType() == Material.RECOVERY_COMPASS) compassCount++;
             else if (is.getType() == Material.PLAYER_HEAD) { headCount++; head = is; }
-            else return; // inny item → nie ruszamy
+            else return;
         }
 
-        // Wymagane: 1x Życie + 1x Recovery Compass + 1x Player Head = 3 itemy
         if (lifeCount != 1 || compassCount != 1 || headCount != 1 || totalItems != 3) return;
 
-        // Wyciągnij właściciela głowy
         if (!(head.getItemMeta() instanceof SkullMeta)) return;
         SkullMeta sm = (SkullMeta) head.getItemMeta();
         if (sm.getOwningPlayer() == null) return;
