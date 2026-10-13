@@ -1,11 +1,13 @@
 package pl.lifesystem;
 
+import net.md_5.bungee.api.ChatMessageType;
+import net.md_5.bungee.api.chat.TextComponent;
 import org.bukkit.*;
 import org.bukkit.entity.Player;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.ItemMeta;
-import org.bukkit.inventory.meta.SkullMeta;
 import org.bukkit.persistence.PersistentDataType;
+import org.bukkit.util.Vector;
 
 import java.util.Arrays;
 import java.util.UUID;
@@ -28,16 +30,16 @@ public class TrackerManager {
         ItemMeta meta = item.getItemMeta();
         meta.setDisplayName(ChatColor.AQUA + "Tracker: " + ChatColor.WHITE + targetName);
         meta.setLore(Arrays.asList(
-                ChatColor.GRAY + "Śledzi gracza " + ChatColor.WHITE + targetName,
+                ChatColor.GRAY + "Sledzi gracza " + ChatColor.WHITE + targetName,
                 ChatColor.GRAY + "Koordynaty: " + ChatColor.YELLOW + "nad hotbarem",
-                ChatColor.GRAY + "Ścieżka: " + ChatColor.AQUA + "cząsteczki 10 bloków"
+                ChatColor.GRAY + "Sciezka: " + ChatColor.AQUA + "10 blokow"
         ));
         meta.getPersistentDataContainer().set(TRACKER_KEY, PersistentDataType.STRING, targetUUID.toString());
         item.setItemMeta(meta);
         return item;
     }
 
-    /** Sprawdza czy item to tracker i zwraca UUID śledzonego gracza (lub null). */
+    /** Zwraca UUID śledzonego gracza (lub null, jeśli to nie tracker). */
     public static UUID getTrackedUUID(ItemStack item) {
         if (item == null || item.getType() != Material.RECOVERY_COMPASS) return null;
         if (!item.hasItemMeta()) return null;
@@ -46,7 +48,7 @@ public class TrackerManager {
         try { return UUID.fromString(s); } catch (IllegalArgumentException e) { return null; }
     }
 
-    /** Główna pętla – wywoływana co 5 ticków dla każdego gracza trzymającego tracker. */
+    /** Wywoływane co 5 ticków dla każdego gracza. */
     public void tick(Player holder) {
         ItemStack item = holder.getInventory().getItemInMainHand();
         UUID targetUUID = getTrackedUUID(item);
@@ -54,11 +56,11 @@ public class TrackerManager {
 
         Player target = Bukkit.getPlayer(targetUUID);
         if (target == null || !target.isOnline()) {
-            holder.sendActionBar(ChatColor.RED + "Tracker: gracz offline");
+            sendActionBar(holder, ChatColor.RED + "Tracker: gracz offline");
             return;
         }
         if (!target.getWorld().equals(holder.getWorld())) {
-            holder.sendActionBar(ChatColor.RED + "Tracker: inny wymiar");
+            sendActionBar(holder, ChatColor.RED + "Tracker: inny wymiar");
             return;
         }
 
@@ -73,42 +75,39 @@ public class TrackerManager {
                 + " Z:" + tLoc.getBlockZ()
                 + ChatColor.GRAY + " | "
                 + ChatColor.GREEN + (int) hLoc.distance(tLoc) + "m";
-        holder.sendActionBar(bar);
+        sendActionBar(holder, bar);
 
         // 2) Kompas wskazuje na gracza
         holder.setCompassTarget(tLoc);
 
-        // 3) Particles – linia 10 bloków w stronę gracza
+        // 3) Particles
         drawParticleLine(holder, hLoc, tLoc);
     }
 
-    /** Rysuje linię cząsteczek od gracza w stronę targetu (max 10 bloków). */
+    /** Action bar w stylu Spigot (nie Paper). */
+    private void sendActionBar(Player player, String message) {
+        player.spigot().sendMessage(ChatMessageType.ACTION_BAR, TextComponent.fromLegacyText(message));
+    }
+
+    /** Linia particles od gracza w stronę targetu (max 10 bloków). */
     private void drawParticleLine(Player holder, Location from, Location to) {
         World world = from.getWorld();
         if (world == null) return;
 
-        // Wektor od gracza do targetu
-        org.bukkit.util.Vector dir = to.toVector().subtract(from.toVector());
-        dir.setY(0); // płaska linia – pomijamy pion
+        Vector dir = to.toVector().subtract(from.toVector());
+        dir.setY(0);
         double dist = dir.length();
         if (dist < 0.5) return;
         dir.normalize();
 
-        // Start lekko nad graczem
         Location start = from.clone().add(0, 1.2, 0);
 
         double maxLen = Math.min(10.0, dist);
-        double step = 0.5; // co 0.5 bloku
+        double step = 0.5;
 
         for (double d = 0; d <= maxLen; d += step) {
             Location p = start.clone().add(dir.clone().multiply(d));
-            world.spawnParticle(
-                    Particle.END_ROD,
-                    p,
-                    1,
-                    0, 0, 0,
-                    0
-            );
+            world.spawnParticle(Particle.END_ROD, p, 1, 0, 0, 0, 0);
         }
     }
 }
