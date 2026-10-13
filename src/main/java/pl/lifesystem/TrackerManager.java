@@ -79,7 +79,6 @@ public class TrackerManager {
         player.openInventory(inv);
     }
 
-    /** Wywoływane co 5 ticków – sprawdza wszystkich graczy trzymających tracker. */
     public void tickAll() {
         Set<UUID> observed = new HashSet<>();
 
@@ -118,7 +117,6 @@ public class TrackerManager {
             drawRedBeam(holder, hLoc, tLoc);
         }
 
-        // Śledzeni gracze widzą komunikat
         for (UUID uuid : observed) {
             Player target = Bukkit.getPlayer(uuid);
             if (target != null && target.isOnline()) {
@@ -133,9 +131,9 @@ public class TrackerManager {
 
     /**
      * Czerwony promień 10 bloków – widoczny TYLKO dla holdera.
-     * Używamy holder.spawnParticle(...) – dzięki temu tylko on widzi cząsteczki.
-     * Particle.DUST z czerwonym kolorem (END_ROD nie da się pokolorować).
+     * Particle.REDSTONE z czerwonym kolorem (stara nazwa DUST).
      */
+    @SuppressWarnings("deprecation")
     private void drawRedBeam(Player holder, Location from, Location to) {
         Vector dir = to.toVector().subtract(from.toVector());
         dir.setY(0);
@@ -151,8 +149,7 @@ public class TrackerManager {
 
         for (double d = 0; d <= maxLen; d += step) {
             Location p = start.clone().add(dir.clone().multiply(d));
-            // holder.spawnParticle – widzi to TYLKO holder
-            holder.spawnParticle(Particle.DUST, p, 1, 0, 0, 0, 0, red);
+            holder.spawnParticle(Particle.REDSTONE, p, 1, 0, 0, 0, 0, red);
         }
     }
 }
